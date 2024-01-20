@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UserSecretsId>3e643728-91f5-446a-9501-547c1b9e29e0</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OOTRTruthSeedBot.Configuration\OOTRTruthSeedBot.Configuration.csproj" />
+    <ProjectReference Include="..\OOTRTruthSeedBot.DAL\OOTRTruthSeedBot.DAL.csproj" />
+    <ProjectReference Include="..\OOTRTruthSeedBot.DiscordBot\OOTRTruthSeedBot.DiscordBot.csproj" />
+    <ProjectReference Include="..\OOTRTruthSeedBot.SeedGenerator\OOTRTruthSeedBot.SeedGenerator.csproj" />
+  </ItemGroup>
+
+</Project>
