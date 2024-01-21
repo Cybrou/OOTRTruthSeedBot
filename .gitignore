@@ -27,6 +27,7 @@ obj/
 _ReSharper*/
 [Tt]est[Rr]esult*
 .vs/
-#Nuget packages folder
 packages/
 launchSettings.json
+/src/OOTRTruthSeedBot/.config
+/src/OOTRTruthSeedBot/Properties/PublishProfiles

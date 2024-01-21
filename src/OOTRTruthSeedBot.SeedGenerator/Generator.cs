@@ -27,87 +27,90 @@ namespace OOTRTruthSeedBot.SeedGenerator
 
         public async Task<SeedResult?> GenerateSeedAsync(int seedNumber)
         {
-            bool semUsed = false;
-
-            if (ConcurrencySem != null)
+            return await Task.Run(async () =>
             {
-                semUsed = true;
-                await ConcurrencySem.WaitAsync(10000);
-            }
+                bool semUsed = false;
 
-            string tempFolder = Path.GetTempFileName();
-            File.Delete(tempFolder);
-            Directory.CreateDirectory(tempFolder);
-
-            string tempSettingsPath = Path.Combine(tempFolder, "settings.sav");
-
-            // Prepare settings.sav
-            JsonNode? json;
-            using (var fs = new FileStream(Config.DefaultSettingsPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                json = await JsonNode.ParseAsync(fs);
-            }
-            
-            if (json == null)
-            {
-                return null;
-            }
-
-            json["output_dir"]?.ReplaceWith(tempFolder);
-            json["user_message"]?.ReplaceWith($"Truth (#{seedNumber})");
-            using (var fs = new FileStream(tempSettingsPath, FileMode.Create))
-            using (var jw = new Utf8JsonWriter(fs))
-            {
-                json.WriteTo(jw);
-            }
-
-            // Generate seed
-            Process generatorProcess = new Process();
-            generatorProcess.StartInfo = new ProcessStartInfo();
-            generatorProcess.StartInfo.WorkingDirectory = Config.RandomizerPath;
-            generatorProcess.StartInfo.FileName = Config.PythonPath;
-            generatorProcess.StartInfo.ArgumentList.Add("OoTRandomizer.py");
-            generatorProcess.StartInfo.ArgumentList.Add("--loglevel");
-            generatorProcess.StartInfo.ArgumentList.Add("error");
-            generatorProcess.StartInfo.ArgumentList.Add("--no_log");
-            generatorProcess.StartInfo.ArgumentList.Add("--settings");
-            generatorProcess.StartInfo.ArgumentList.Add(tempSettingsPath);
-            generatorProcess.Start();
-            await generatorProcess.WaitForExitAsync();
-            if (generatorProcess.ExitCode != 0)
-            {
-                return null;
-            }
-
-            // Read generated seed
-            byte[]? seed = null;
-            byte[]? spoiler = null;
-            foreach(var file in Directory.GetFiles(tempFolder))
-            {
-                if (file.EndsWith(".zpf"))
+                if (ConcurrencySem != null)
                 {
-                    seed = await File.ReadAllBytesAsync(file);
+                    semUsed = true;
+                    await ConcurrencySem.WaitAsync(10000);
                 }
-                else if (file.EndsWith("_Spoiler.json"))
+
+                string tempFolder = Path.GetTempFileName();
+                File.Delete(tempFolder);
+                Directory.CreateDirectory(tempFolder);
+
+                string tempSettingsPath = Path.Combine(tempFolder, "settings.sav");
+
+                // Prepare settings.sav
+                JsonNode? json;
+                using (var fs = new FileStream(Config.DefaultSettingsPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    spoiler = await File.ReadAllBytesAsync(file);
+                    json = await JsonNode.ParseAsync(fs);
                 }
-            }
 
-            SeedResult? result = null;
-            if (seed != null && spoiler != null)
-            {
-                result = new SeedResult(seedNumber, seed, spoiler);
-            }
+                if (json == null)
+                {
+                    return null;
+                }
 
-            Directory.Delete(tempFolder, true);
+                json["output_dir"]?.ReplaceWith(tempFolder);
+                json["user_message"]?.ReplaceWith($"Truth (#{seedNumber})");
+                using (var fs = new FileStream(tempSettingsPath, FileMode.Create))
+                using (var jw = new Utf8JsonWriter(fs))
+                {
+                    json.WriteTo(jw);
+                }
 
-            if (semUsed)
-            {
-                ConcurrencySem?.Release();
-            }
+                // Generate seed
+                Process generatorProcess = new Process();
+                generatorProcess.StartInfo = new ProcessStartInfo();
+                generatorProcess.StartInfo.WorkingDirectory = Config.RandomizerPath;
+                generatorProcess.StartInfo.FileName = Config.PythonPath;
+                generatorProcess.StartInfo.ArgumentList.Add("OoTRandomizer.py");
+                generatorProcess.StartInfo.ArgumentList.Add("--loglevel");
+                generatorProcess.StartInfo.ArgumentList.Add("error");
+                generatorProcess.StartInfo.ArgumentList.Add("--no_log");
+                generatorProcess.StartInfo.ArgumentList.Add("--settings");
+                generatorProcess.StartInfo.ArgumentList.Add(tempSettingsPath);
+                generatorProcess.Start();
+                await generatorProcess.WaitForExitAsync();
+                if (generatorProcess.ExitCode != 0)
+                {
+                    return null;
+                }
 
-            return result;
+                // Read generated seed
+                byte[]? seed = null;
+                byte[]? spoiler = null;
+                foreach (var file in Directory.GetFiles(tempFolder))
+                {
+                    if (file.EndsWith(".zpf"))
+                    {
+                        seed = await File.ReadAllBytesAsync(file);
+                    }
+                    else if (file.EndsWith("_Spoiler.json"))
+                    {
+                        spoiler = await File.ReadAllBytesAsync(file);
+                    }
+                }
+
+                SeedResult? result = null;
+                if (seed != null && spoiler != null)
+                {
+                    result = new SeedResult(seedNumber, seed, spoiler);
+                }
+
+                Directory.Delete(tempFolder, true);
+
+                if (semUsed)
+                {
+                    ConcurrencySem?.Release();
+                }
+
+                return result;
+            });
         }
 
         public async Task WriteSeedOnDiskAsync(SeedResult seed)

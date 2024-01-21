@@ -29,6 +29,7 @@ namespace OOTRTruthSeedBot.Config
             services.AddScoped<SeedGenerator.Generator>();
 
             services.AddHostedService<DiscordBotHostedService>();
+            services.AddHostedService<PurgeSeedHostedService>();
 
             return services;
         }

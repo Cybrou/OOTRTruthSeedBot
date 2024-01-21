@@ -7,5 +7,6 @@
         public string DefaultSettingsPath { get; set; } = "";
         public string SeedOutputPath { get; set; } = "";
         public int MaximumConcurrency { get; set; } = 3;
+        public int MaximumSeeds { get; set; } = 200;
     }
 }

@@ -2,6 +2,7 @@
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OOTRTruthSeedBot.DAL.Models;
 using OOTRTruthSeedBot.SeedGenerator;
 
@@ -11,18 +12,21 @@ namespace OOTRTruthSeedBot.DiscordBot
     {
         public Bot(
                 Configuration.Config config,
-                IServiceScopeFactory scopeFactory
+                IServiceScopeFactory scopeFactory,
+                ILogger<Bot> logger
             )
         {
             Config = config;
             ScopeFactory = scopeFactory;
             DiscordSocketConfig socketConf = new() { GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers };
             Client = new DiscordSocketClient(socketConf);
+            Logger = logger;
         }
 
         private Configuration.Config Config { get; set; }
         private DiscordSocketClient Client { get; set; }
         private IServiceScopeFactory ScopeFactory { get; set; }
+        private ILogger<Bot> Logger { get; set; }
 
         public async Task Start()
         {
@@ -34,11 +38,33 @@ namespace OOTRTruthSeedBot.DiscordBot
             await Client.LoginAsync(TokenType.Bot, Config.Discord.BotToken);
             Client.Ready += Client_Ready;
             Client.SlashCommandExecuted += Client_SlashCommandHandler;
+            Client.Log += Client_Log;
 
             await Client.StartAsync();
             await Task.Delay(-1).WaitAsync(cancellationToken);
             await Client.StopAsync();
             await Client.LogoutAsync();
+        }
+
+        public async Task Reset()
+        {
+            try
+            {
+                await Client.StopAsync();
+            }
+            catch (Exception) { }
+
+            try
+            {
+                await Client.LogoutAsync();
+                Client.Ready -= Client_Ready;
+                Client.SlashCommandExecuted -= Client_SlashCommandHandler;
+                Client.Log -= Client_Log;
+            }
+            catch (Exception) { }
+
+            DiscordSocketConfig socketConf = new() { GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers };
+            Client = new DiscordSocketClient(socketConf);
         }
 
         private async Task Client_Ready()
@@ -48,6 +74,16 @@ namespace OOTRTruthSeedBot.DiscordBot
             {
                 await guild.DownloadUsersAsync();
             }
+        }
+
+        private Task Client_Log(LogMessage log)
+        {
+            if (log.Exception != null)
+            {
+                Logger.LogError(log.Exception, log.Message);
+            }
+
+            return Task.CompletedTask;
         }
 
         public async Task RegisterCommands()
@@ -83,6 +119,8 @@ namespace OOTRTruthSeedBot.DiscordBot
 
         private async Task Client_SlashCommandHandler(SocketSlashCommand cmd)
         {
+            await cmd.DeferAsync();
+
             // Check channel
             if (cmd.ChannelId != Config.Discord.BotChannel)
             {
@@ -91,25 +129,38 @@ namespace OOTRTruthSeedBot.DiscordBot
                   .WithDescription($"Commands can only be used in the <#{Config.Discord.BotChannel}> channel.")
                   .WithColor(new Color(0xFF, 0, 0));
 
-                await cmd.RespondAsync(embed: eb.Build(), ephemeral: true);
+                await cmd.FollowupAsync(embed: eb.Build(), ephemeral: true);
                 return;
             }
 
-            switch(cmd.Data.Name)
+            try
             {
-                case "seed":
-                    await SeedCommandHandler(cmd);
-                    break;
-                case "unlock":
-                    await UnlockCommandHandler(cmd);
-                    break;
+                switch (cmd.Data.Name)
+                {
+                    case "seed":
+                        await SeedCommandHandler(cmd);
+                        break;
+                    case "unlock":
+                        await UnlockCommandHandler(cmd);
+                        break;
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError(ex, "Error while processing bot slash command");
+
+                EmbedBuilder eb = new();
+                eb.WithTitle("Error")
+                  .WithDescription($"Sorry, something went wrong :-(, I crashed.")
+                  .WithColor(new Color(0xFF, 0, 0));
+
+                await cmd.FollowupAsync(embed: eb.Build(), ephemeral: true);
             }
         }
 
         private async Task SeedCommandHandler(SocketSlashCommand cmd)
         {
             long? seedNumber = (long?)cmd.Data.Options.FirstOrDefault()?.Value;
-            await cmd.DeferAsync();
 
             using (var scope = ScopeFactory.CreateScope())
             {
@@ -215,7 +266,6 @@ namespace OOTRTruthSeedBot.DiscordBot
         private async Task UnlockCommandHandler(SocketSlashCommand cmd)
         {
             long seedNumber = (long)cmd.Data.Options.First().Value;
-            await cmd.DeferAsync();
 
             using (var scope = ScopeFactory.CreateScope())
             {
