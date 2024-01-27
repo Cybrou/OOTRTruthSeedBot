@@ -9,14 +9,16 @@ namespace OOTRTruthSeedBot.Controllers
     [Route("seed")]
     public class SeedController : BaseController
     {
-        public SeedController(Context database, Configuration.Config config)
+        public SeedController(Context database, Configuration.Config config, Generator generator)
         {
             Database = database;
             Config = config;
+            Generator = generator;
         }
 
         private Configuration.Config Config { get; set; }
         private Context Database { get; set; }
+        private Generator Generator { get; set; }
 
         [HttpGet]
         [Route("{id}")]
@@ -81,6 +83,39 @@ namespace OOTRTruthSeedBot.Controllers
             var gz = new GZipStream(fs, CompressionMode.Decompress);
 
             return File(gz, "application/json", fileName);
+        }
+
+        [HttpGet]
+        [Route("{id}/hash")]
+        public async Task<IActionResult> GetHash(int id)
+        {
+            Seed? seed = await Database.Seeds.Where(s => s.Id == id).FirstOrDefaultAsync();
+            if (seed == null || !seed.IsGenerated)
+            {
+                var result = Content("That seed does not seem to exist.");
+                result.StatusCode = 404;
+
+                return result;
+            }
+
+            if (seed.IsDeleted)
+            {
+                var result = Content("That seed is too old and had been purged.");
+                result.StatusCode = 410;
+
+                return result;
+            }
+
+            string? hash = await Generator.GetHash(id);
+            if (hash == null)
+            {
+                var result = Content("Error while retrieving seed hash.");
+                result.StatusCode = 500;
+
+                return result;
+            }
+
+            return Content(hash);
         }
     }
 }

@@ -165,11 +165,10 @@ namespace OOTRTruthSeedBot.DiscordBot
             using (var scope = ScopeFactory.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<Context>();
+                var generator = scope.ServiceProvider.GetRequiredService<Generator>();
 
                 if (seedNumber == null) // New seed
                 {
-                    var generator = scope.ServiceProvider.GetRequiredService<Generator>();
-
                     // Prepare db entry
                     Seed newSeed = new Seed() { CreationDate = DateTime.UtcNow, CreatorId = cmd.User.Id };
                     db.Seeds.Add(newSeed);
@@ -184,16 +183,23 @@ namespace OOTRTruthSeedBot.DiscordBot
                         await generator.WriteSeedOnDiskAsync(res);
                         newSeed.IsGenerated = true;
                         await db.SaveChangesAsync();
+                        string? seedHash = await generator.GetHash(newSeed.Id);
+
 
                         StringBuilder sb = new();
                         sb.Append($"Seed number: {newSeed.Id}\n");
+                        if (seedHash != null)
+                        {
+                            sb.Append($"Seed hash: {seedHash}\n");
+                        }
                         sb.Append($"[Click here to download the zpf]({Config.Web.GetSeedUrl(newSeed.Id)})\n");
                         sb.Append($"Use the following command to unlock the spoiler log: `/unlock {newSeed.Id}`");
 
                         EmbedBuilder eb = new();
                         eb.WithTitle($"Your seed is ready {userName}")
                           .WithDescription(sb.ToString())
-                          .WithColor(new Color(0x0, 0xff, 0x8));
+                          .WithColor(new Color(0x0, 0xff, 0x8))
+                          .WithFooter($"zpf copy/past: {Config.Web.GetSeedUrl(newSeed.Id)}");
 
                         await cmd.FollowupAsync(embed: eb.Build());
                         return;
@@ -225,9 +231,16 @@ namespace OOTRTruthSeedBot.DiscordBot
                     else
                     {
                         StringBuilder sb = new();
+                        StringBuilder fSb = new();
                         string? userName = Client.GetGuild(cmd.GuildId.Value).GetUser(seed.CreatorId)?.DisplayName;
+                        string? seedHash = await generator.GetHash(seed.Id);
 
                         sb.Append($"Creator: {userName ?? "unknown"} (at <t:{seed.InternalCreationDate}>)\n");
+                        if (!seed.IsDeleted && seedHash != null)
+                        {
+                            sb.Append($"Seed hash: {seedHash}\n");
+                        }
+
                         if (seed.IsDeleted)
                         {
                             sb.Append("State: purged\n");
@@ -244,17 +257,20 @@ namespace OOTRTruthSeedBot.DiscordBot
                         if (!seed.IsDeleted)
                         {
                             sb.Append($"[Click here to download the zpf]({Config.Web.GetSeedUrl(seed.Id)})\n");
+                            fSb.Append($"zpf copy/past: {Config.Web.GetSeedUrl(seed.Id)}");
 
                             if (seed.IsUnlocked)
                             {
                                 sb.Append($"[Click here to download the spoiler log]({Config.Web.GetSpoilerUrl(seed.Id)})\n");
+                                fSb.Append($"\nspoiler copy/past: {Config.Web.GetSpoilerUrl(seed.Id)}");
                             }
                         }
 
                         EmbedBuilder eb = new();
                         eb.WithTitle($"Seed #{seed.Id}")
                           .WithDescription(sb.ToString())
-                          .WithColor(new Color(0x22, 0x00, 0xff));
+                          .WithColor(new Color(0x22, 0x00, 0xff))
+                          .WithFooter(fSb.ToString());
 
                         await cmd.FollowupAsync(embed: eb.Build());
                         return;
@@ -324,7 +340,8 @@ namespace OOTRTruthSeedBot.DiscordBot
                     EmbedBuilder eb = new();
                     eb.WithTitle($"The seed #{seed.Id} is now unlocked")
                       .WithDescription($"[Click here to download the spoiler log]({Config.Web.GetSpoilerUrl(seed.Id)})")
-                      .WithColor(new Color(0xff, 0x0, 0xea));
+                      .WithColor(new Color(0xff, 0x0, 0xea))
+                      .WithFooter($"spoiler copy/past: {Config.Web.GetSpoilerUrl(seed.Id)}");
 
                     await cmd.FollowupAsync(embed: eb.Build());
                 }

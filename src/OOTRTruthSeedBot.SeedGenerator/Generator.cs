@@ -152,5 +152,29 @@ namespace OOTRTruthSeedBot.SeedGenerator
         {
             return $"{GetSpoilerFileName(seedNumber)}.gz";
         }
+
+        public async Task<string?> GetHash(int seedNumber)
+        {
+            string spoilerLogPath = Path.Combine(Config.SeedOutputPath, seedNumber.ToString(), GetSpoilerCompressedFileName(seedNumber));
+            if (!File.Exists(spoilerLogPath))
+            {
+                return null;
+            }
+
+            // Read spoiler
+            JsonNode? json;
+            string? hash = null;
+            using (var fs = new FileStream(spoilerLogPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var gz = new GZipStream(fs, CompressionMode.Decompress)) 
+            {
+                json = await JsonNode.ParseAsync(gz);
+                hash = json?["file_hash"]?.ToJsonString()?.Replace("[", "")
+                                                         ?.Replace("]", "")
+                                                         ?.Replace("\"", "")
+                                                         ?.Replace(",", " - ");
+            }
+
+            return hash;
+        }
     }
 }
