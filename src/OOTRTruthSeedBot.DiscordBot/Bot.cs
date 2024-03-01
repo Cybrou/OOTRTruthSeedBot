@@ -379,32 +379,14 @@ namespace OOTRTruthSeedBot.DiscordBot
                 return false;
             }
 
-            TimeZoneInfo frTz;
-            TimeZoneInfo esTz;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                frTz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-                esTz = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-            }
-            else
-            {
-                frTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Paris");
-                esTz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
-            }
-
-            DateTime frDateTime = TimeZoneInfo.ConvertTimeFromUtc(date, frTz);
-            DateTime usDateTime = TimeZoneInfo.ConvertTimeFromUtc(date, esTz);
-
-            CultureInfo frCu = CultureInfo.GetCultureInfo("fr-FR");
+            int unixIimeStamp = (int)(date - DateTime.UnixEpoch).TotalSeconds;
 
             StringBuilder sb = new StringBuilder();
             sb.Append($"**{matchup}**\n");
             sb.Append($"> *{type}*\n");
             sb.Append($"> {round}\n");
-            sb.Append($"> CET: {frDateTime.ToString("dddd dd MMMM HH:ss", frCu)}\n");
-            sb.Append($"> ET: {usDateTime.ToString("dddd dd MMMM HH:ss", frCu)}\n");
-            sb.Append($"> Host par <@{hostId}> et <@{cohostId}>");
+            sb.Append($"> Date : <t:{unixIimeStamp}>\n");
+            sb.Append($"> Host par <@{hostId}> et <@{cohostId}>\n");
 
             IMessageChannel? chan = await Client.GetChannelAsync(Config.Discord.BotRestreamChannel) as IMessageChannel;
             if (chan == null)
