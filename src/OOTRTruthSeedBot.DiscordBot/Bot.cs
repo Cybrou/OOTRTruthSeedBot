@@ -30,6 +30,7 @@ namespace OOTRTruthSeedBot.DiscordBot
         private DiscordSocketClient Client { get; set; }
         private IServiceScopeFactory ScopeFactory { get; set; }
         private ILogger<Bot> Logger { get; set; }
+        private SocketGuild? Guild { get; set; }
 
         public async Task Start()
         {
@@ -72,10 +73,10 @@ namespace OOTRTruthSeedBot.DiscordBot
 
         private async Task Client_Ready()
         {
-            SocketGuild? guild = Client.GetGuild(Config.Discord.BotServer);
-            if (guild != null)
+            Guild = Client.GetGuild(Config.Discord.BotServer);
+            if (Guild != null)
             {
-                await guild.DownloadUsersAsync();
+                await Guild.DownloadUsersAsync();
             }
         }
 
@@ -196,7 +197,8 @@ namespace OOTRTruthSeedBot.DiscordBot
                             sb.Append($"Seed hash: {seedHash}\n");
                         }
                         sb.Append($"[Click here to download the zpf]({Config.Web.GetSeedUrl(newSeed.Id)})\n");
-                        sb.Append($"Use the following command to unlock the spoiler log: `/unlock {newSeed.Id}`");
+                        sb.Append($"Use the following command to unlock the spoiler log: `/unlock {newSeed.Id}`\n");
+                        sb.Append($"Go to [OOTRandomizer](https://ootrandomizer.com/generator) for generating from the patch file");
 
                         EmbedBuilder eb = new();
                         eb.WithTitle($"Your seed is ready {userName}")
@@ -267,6 +269,8 @@ namespace OOTRTruthSeedBot.DiscordBot
                                 sb.Append($"[Click here to download the spoiler log]({Config.Web.GetSpoilerUrl(seed.Id)})\n");
                                 fSb.Append($"\nspoiler copy/past: {Config.Web.GetSpoilerUrl(seed.Id)}");
                             }
+
+                            sb.Append($"Go to [OOTRandomizer](https://ootrandomizer.com/generator) for generating from the patch file");
                         }
 
                         EmbedBuilder eb = new();
@@ -351,13 +355,26 @@ namespace OOTRTruthSeedBot.DiscordBot
             }
         }
 
+        public async Task ForceGuildUsersRefresh()
+        {
+            if (Guild != null)
+            {
+                await Guild.DownloadUsersAsync();
+            }
+        }
+
+        private ulong? FindGuildUser(string discordName)
+        {
+            return Guild?.Users?.Where(u => u.Username == discordName).Select(u => (ulong?)u.Id).FirstOrDefault();
+        }
+
         public async Task<bool> SendRestreamNotif(string type, string round, string matchup, string host, string cohost, DateTime date)
         {
             // Retrieve user id
-            ulong? hostId = Client.GetUser(host)?.Id;
-            ulong? cohostId = Client.GetUser(cohost)?.Id;
+            ulong? hostId = FindGuildUser(host);
+            ulong? cohostId = FindGuildUser(cohost);
 
-            if (hostId == null || cohostId == null || Config.Discord.BotRestreamChannel > 0)
+            if (hostId == null || cohostId == null || Config.Discord.BotRestreamChannel == 0)
             {
                 return false;
             }

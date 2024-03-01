@@ -34,6 +34,8 @@ namespace OOTRTruthSeedBot.HostedServices
                     var db = scope.ServiceProvider.GetRequiredService<Context>();
                     var bot = scope.ServiceProvider.GetRequiredService<Bot>();
 
+                    await bot.ForceGuildUsersRefresh();
+
                     // Download sheet data
                     HttpClient http = new HttpClient();
                     using HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Get, config.Restream.SheetUri);
@@ -60,6 +62,8 @@ namespace OOTRTruthSeedBot.HostedServices
                             && dateTime >= config.Restream.MinDate
                             && !(await db.RestreamNotifs.AnyAsync(r => r.Guid == guid)))
                         {
+                            dateTime = dateTime.ToUniversalTime();
+
                             string type = csv.GetField(2);
                             string matchtup = csv.GetField(3);
                             string round = csv.GetField(4);

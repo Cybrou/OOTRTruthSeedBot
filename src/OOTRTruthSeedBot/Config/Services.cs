@@ -30,6 +30,7 @@ namespace OOTRTruthSeedBot.Config
 
             services.AddHostedService<DiscordBotHostedService>();
             services.AddHostedService<PurgeSeedHostedService>();
+            services.AddHostedService<RestreamNotifHostedService>();
 
             return services;
         }
