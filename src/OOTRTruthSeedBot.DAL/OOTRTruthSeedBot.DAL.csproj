@@ -8,10 +8,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Schema\v1.0.0.sql" />
+    <None Remove="Schema\v1.1.0.sql" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Schema\v1.0.0.sql" />
+    <Content Include="Schema\v1.1.0.sql" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />

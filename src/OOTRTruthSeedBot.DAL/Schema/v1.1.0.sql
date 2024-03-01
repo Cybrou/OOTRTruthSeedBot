@@ -11,4 +11,9 @@ CREATE TABLE seed (
 	state INTEGER NOT NULL CONSTRAINT df_state DEFAULT (0)
 ) STRICT;
 
-INSERT INTO version VALUES ('1.0.0');
+CREATE TABLE restream_notif (
+	guid TEXT NOT NULL PRIMARY KEY,
+	sent_date INTEGER NOT NULL
+) STRICT;
+
+INSERT INTO version VALUES ('1.1.0');

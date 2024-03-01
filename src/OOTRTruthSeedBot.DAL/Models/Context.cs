@@ -10,12 +10,26 @@ public partial class Context : DbContext
     {
     }
 
+    public virtual DbSet<RestreamNotif> RestreamNotifs { get; set; }
+
     public virtual DbSet<Seed> Seeds { get; set; }
 
     public virtual DbSet<Version> Versions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<RestreamNotif>(entity =>
+        {
+            entity.HasKey(e => e.Guid);
+
+            entity.ToTable("restream_notif");
+
+            entity.Property(e => e.Guid).HasColumnName("guid");
+            entity.Property(e => e.InternalSentDate).HasColumnName("sent_date");
+
+            entity.Ignore(e => e.SentDate);
+        });
+
         modelBuilder.Entity<Seed>(entity =>
         {
             entity.HasKey(e => e.Id);

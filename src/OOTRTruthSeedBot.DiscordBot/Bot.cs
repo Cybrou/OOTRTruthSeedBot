@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -346,6 +349,55 @@ namespace OOTRTruthSeedBot.DiscordBot
                     await cmd.FollowupAsync(embed: eb.Build());
                 }
             }
+        }
+
+        public async Task<bool> SendRestreamNotif(string type, string round, string matchup, string host, string cohost, DateTime date)
+        {
+            // Retrieve user id
+            ulong? hostId = Client.GetUser(host)?.Id;
+            ulong? cohostId = Client.GetUser(cohost)?.Id;
+
+            if (hostId == null || cohostId == null || Config.Discord.BotRestreamChannel > 0)
+            {
+                return false;
+            }
+
+            TimeZoneInfo frTz;
+            TimeZoneInfo esTz;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                frTz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+                esTz = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            }
+            else
+            {
+                frTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Paris");
+                esTz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            }
+
+            DateTime frDateTime = TimeZoneInfo.ConvertTimeFromUtc(date, frTz);
+            DateTime usDateTime = TimeZoneInfo.ConvertTimeFromUtc(date, esTz);
+
+            CultureInfo frCu = CultureInfo.GetCultureInfo("fr-FR");
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"**{matchup}**\n");
+            sb.Append($"> *{type}*\n");
+            sb.Append($"> {round}\n");
+            sb.Append($"> CET: {frDateTime.ToString("dddd dd MMMM HH:ss", frCu)}\n");
+            sb.Append($"> ET: {usDateTime.ToString("dddd dd MMMM HH:ss", frCu)}\n");
+            sb.Append($"> Host par <@{hostId}> et <@{cohostId}>");
+
+            IMessageChannel? chan = await Client.GetChannelAsync(Config.Discord.BotRestreamChannel) as IMessageChannel;
+            if (chan == null)
+            {
+                return false;
+            }
+
+            await chan.SendMessageAsync(sb.ToString());
+
+            return true;
         }
     }
 }
